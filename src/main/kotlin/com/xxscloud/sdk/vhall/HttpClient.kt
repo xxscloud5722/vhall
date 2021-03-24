@@ -18,31 +18,31 @@ import kotlin.collections.HashMap
 object HttpClient {
     private val CLIENT = OkHttpClient.Builder().build()
     private val JSON_MAPPER: ObjectMapper = ObjectMapper()
-    private const val BASE_URL = "https://e.vhall.com/api/vhallapi/v2"
+    private const val BASE_URL = "https://saas-open.vhall.com"
     private val log = LoggerFactory.getLogger(HttpClient::class.java)
 
 
-    fun post(token: VHallToken, url: String, request: HashMap<String, Any>): HashMap<String, Any> {
+    fun post(token: VHallToken, url: String, request: HashMap<String, Any>, fileType: String = "png"): HashMap<String, Any> {
         val timestamp = System.currentTimeMillis().toString()
         val parameter = TreeMap<String, Any>()
-        parameter["auth_type"] = "2"
         parameter["app_key"] = token.appKey
+        parameter["sign_type"] = "0"
         parameter["signed_at"] = timestamp
         request.forEach { (k, v) ->
             parameter[k] = v
         }
         parameter["sign"] = getSign(token.secretKey, parameter)
 
-        val body = MultipartBody.Builder()
-                .setType(MultipartBody.FORM)
+        val body = MultipartBody.Builder().setType(MultipartBody.FORM)
         parameter.forEach { (k, v) ->
-            if (v is File) {
-                body.addFormDataPart(k, v.name, v.asRequestBody("application/octet-stream".toMediaType()))
+            if (v is ByteArray) {
+                body.addFormDataPart(k, UUID.randomUUID().toString() + "." + fileType, v.toRequestBody("application/octet-stream".toMediaType()))
             } else {
                 body.addFormDataPart(k, v.toString())
             }
         }
         val requestUrl = BASE_URL + url
+        parameter.remove("resfile")
         log.debug("[微吼] 地址: $requestUrl 请求参数: ${JSON_MAPPER.writeValueAsString(parameter)}")
         val response = CLIENT.newCall(Request.Builder().url(requestUrl).post(body.build()).build()).execute()
         val responseJson = response.body?.string() ?: throw IOException("response is null")
@@ -53,11 +53,16 @@ object HttpClient {
     private fun getSign(secretKey: String, parameter: TreeMap<String, Any>): String {
         val value = StringBuilder(secretKey)
         parameter.forEach { (k, v) ->
-            if (v !is File) {
+            if (v !is ByteArray) {
                 value.append(k).append(v)
             }
         }
         value.append(secretKey)
         return DigestUtils.md5Hex(value.toString())
+    }
+
+    fun get(url: String): ByteArray? {
+        val response = CLIENT.newCall(Request.Builder().url(url).get().build()).execute()
+        return response.body?.bytes()
     }
 }
