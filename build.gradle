@@ -10,7 +10,7 @@ plugins {
 
 apply from: '/Users/xxscloud/config/publish.gradle'
 group 'com.xxscloud.sdk'
-version '1.1'
+version '1.2'
 
 repositories {
     maven { url 'https://maven.aliyun.com/repository/central' }
@@ -112,13 +112,13 @@ publishing {
 
     repositories {
         mavenLocal()
-//        maven {
-//            url 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
-//            credentials {
-//                username sonatypeUsername
-//                password sonatypePassword
-//            }
-//        }
+        maven {
+            url 'https://oss.sonatype.org/service/local/staging/deploy/maven2'
+            credentials {
+                username sonatypeUsername
+                password sonatypePassword
+            }
+        }
     }
 }
 

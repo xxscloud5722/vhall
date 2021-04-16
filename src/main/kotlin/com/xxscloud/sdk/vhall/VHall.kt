@@ -61,7 +61,7 @@ class VHall constructor(
         return if ((result["code"] ?: "").toString() == "200") {
             val value = HashMap<String, Any>()
             value["id"] = (result["data"] as LinkedHashMap<String, Any>)["webinar_id"].toString()
-            value["url"] = "https://live.vhall.com/room/watch/" + value["id"]
+            value["url"] = "https://live.vhall.com/v3/lives/watch/" + value["id"]
             value
         } else {
             throw  IOException((result["msg"] ?: "").toString())
