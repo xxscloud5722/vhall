@@ -1,14 +1,13 @@
-@file:Suppress("UNCHECKED_CAST", "unused")
+@file:Suppress("UNCHECKED_CAST", "unused", "DuplicatedCode")
 
 package com.xxscloud.sdk.vhall
 
 import java.io.IOException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.collections.HashMap
-import kotlin.collections.LinkedHashMap
 
 
 /**
@@ -69,6 +68,75 @@ class VHall constructor(
     }
 
     /**
+     * 创建直播.
+     * @param live Live 直播实体.
+     * @return HashMap<String, Any> 直播间信息.
+     */
+    fun create(live: Live): HashMap<String, Any> {
+        val simpleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm")
+        val request = HashMap<String, Any>()
+        request["subject"] = live.subject
+        live.introduction?.let {
+            request["introduction"] = it
+        }
+        request["start_time"] = simpleDateFormat.format(live.startTime)
+        request["webinar_type"] = live.webinarType
+        live.imgUrl?.let {
+            request["img_url"] = it
+        }
+        live.isPrivate?.let {
+            request["is_private"] = if (it) 1 else 0
+        }
+        live.isOpen?.let {
+            request["is_open"] = if (it) 1 else 0
+        }
+        live.hideWatch?.let {
+            request["hide_watch"] = if (it) 1 else 0
+        }
+        live.isAdiWatchDoc?.let {
+            request["is_adi_watch_doc"] = if (it) 1 else 0
+        }
+        live.hideAppointment?.let {
+            request["hide_appointment"] = if (it) 1 else 0
+        }
+        live.hidePv?.let {
+            request["hide_pv"] = if (it) 1 else 0
+        }
+        live.webinarCurrNum?.let {
+            request["webinar_curr_num"] = it
+        }
+        live.isCapacity?.let {
+            request["is_capacity"] = if (it) 1 else 0
+        }
+        live.num?.let {
+            request["num"] = it
+        }
+        live.webinarShowType?.let {
+            request["webinar_show_type"] = it
+        }
+        live.fee?.let {
+            val decimalFormat = DecimalFormat("0.##")
+            request["fee"] = decimalFormat.format(it)
+        }
+        live.password?.let {
+            request["password"] = it
+        }
+        live.verify?.let {
+            request["password"] = it
+        }
+
+        val result = HttpClient.post(token, "/v3/webinars/webinar/create", request)
+        return if ((result["code"] ?: "").toString() == "200") {
+            val value = HashMap<String, Any>()
+            value["id"] = (result["data"] as LinkedHashMap<String, Any>)["webinar_id"].toString()
+            value["url"] = "https://live.vhall.com/v3/lives/watch/" + value["id"]
+            value
+        } else {
+            throw  IOException((result["msg"] ?: "").toString())
+        }
+    }
+
+    /**
      * 修改直播信息.
      * @param id String 直播ID.
      * @param subject String 标题.
@@ -86,6 +154,73 @@ class VHall constructor(
         request["introduction"] = introduction
         if (cover.isNotEmpty()) {
             request["img_url"] = cover
+        }
+
+        val result = HttpClient.post(token, "/v3/webinars/webinar/edit", request)
+        if ((result["code"] ?: "").toString() != "200") {
+            throw IOException((result["msg"] ?: "").toString())
+        }
+        return true
+    }
+
+    /**
+     * 修改直播.
+     * @param id String 直播ID.
+     * @param live Live 直播实体.
+     * @return HashMap<String, Any> 直播间信息.
+     */
+    fun update(id: String, live: Live): Boolean {
+        val simpleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm")
+        val request = HashMap<String, Any>()
+        request["webinar_id"] = id
+        request["subject"] = live.subject
+        live.introduction?.let {
+            request["introduction"] = it
+        }
+        request["start_time"] = simpleDateFormat.format(live.startTime)
+        request["webinar_type"] = live.webinarType
+        live.imgUrl?.let {
+            request["img_url"] = it
+        }
+        live.isPrivate?.let {
+            request["is_private"] = if (it) 1 else 0
+        }
+        live.isOpen?.let {
+            request["is_open"] = if (it) 1 else 0
+        }
+        live.hideWatch?.let {
+            request["hide_watch"] = if (it) 1 else 0
+        }
+        live.isAdiWatchDoc?.let {
+            request["is_adi_watch_doc"] = if (it) 1 else 0
+        }
+        live.hideAppointment?.let {
+            request["hide_appointment"] = if (it) 1 else 0
+        }
+        live.hidePv?.let {
+            request["hide_pv"] = if (it) 1 else 0
+        }
+        live.webinarCurrNum?.let {
+            request["webinar_curr_num"] = it
+        }
+        live.isCapacity?.let {
+            request["is_capacity"] = if (it) 1 else 0
+        }
+        live.num?.let {
+            request["num"] = it
+        }
+        live.webinarShowType?.let {
+            request["webinar_show_type"] = it
+        }
+        live.fee?.let {
+            val decimalFormat = DecimalFormat("0.##")
+            request["fee"] = decimalFormat.format(it)
+        }
+        live.password?.let {
+            request["password"] = it
+        }
+        live.verify?.let {
+            request["password"] = it
         }
 
         val result = HttpClient.post(token, "/v3/webinars/webinar/edit", request)
@@ -300,10 +435,87 @@ class VHall constructor(
         return (result["data"] as LinkedHashMap<String, Any>)["domain_url"].toString()
     }
 
+
     // -----
 
-    fun generateWatchUrl(id: String, userId: String = "", nickName: String = "默认"): String {
+    /**
+     * 设置全局认证.
+     * @param status Boolean 是否开启.
+     * @param authAddress String 认证地址.
+     * @param failAddress String 认证失败地址.
+     * @return Boolean 是否成功.
+     * 回执地址请参考: https://www.vhall.com/saas/doc/161.html
+     */
+    fun setGlobalAuth(status: Boolean, authAddress: String, failAddress: String): Boolean {
+        val request = HashMap<String, Any>()
+        request["curr_auth"] = if (status) 1 else 0
+        request["curr_url"] = authAddress
+        request["fail_url"] = failAddress
+        val result = HttpClient.post(token, "/v3/webinars/auth/edit-global", request)
+        if ((result["code"] ?: "").toString() != "200") {
+            throw IOException((result["msg"] ?: "").toString())
+        }
+        return true
+    }
+
+    /**
+     * 设置单个直播的认证.
+     * @param liveId String 直播ID.
+     * @param globalStatus Boolean 是否引用全局.
+     * @param status Boolean 是否开启.
+     * @param authAddress String 认证地址.
+     * @param failAddress String 认证失败地址.
+     * @return Boolean 是否成功.
+     * 回执地址请参考: https://www.vhall.com/saas/doc/161.html
+     */
+    fun setLiveAuth(liveId: String, globalStatus: Boolean, status: Boolean, authAddress: String, failAddress: String): Boolean {
+        val request = HashMap<String, Any>()
+        request["webinar_id"] = liveId
+        request["use_global_k"] = if (globalStatus) 1 else 0
+        request["curr_auth"] = if (status) 1 else 0
+        request["curr_url"] = authAddress
+        request["fail_url"] = failAddress
+        val result = HttpClient.post(token, "/v3/webinars/auth/edit", request)
+        if ((result["code"] ?: "").toString() != "200") {
+            throw IOException((result["msg"] ?: "").toString())
+        }
+        return true
+    }
+
+    /**
+     * 设置认证.
+     * @param liveId String 直播ID.
+     * @return LinkedHashMap<String, Any> 认证信息.
+     */
+    fun getAuthInfo(liveId: String): LinkedHashMap<String, Any> {
+        val request = HashMap<String, Any>()
+        request["webinar_id"] = liveId
+        val result = HttpClient.post(token, "/v3/webinars/auth/info", request)
+        if ((result["code"] ?: "").toString() != "200") {
+            throw IOException((result["msg"] ?: "").toString())
+        }
+        return result["data"] as LinkedHashMap<String, Any>
+    }
+
+
+    // -----
+
+    /**
+     * 生成直播嵌入地址.
+     * @param id String 直播ID.
+     * @param userId String 用户ID.
+     * @param nickName String 昵称.
+     * @param k String K值参数验证.
+     * @return String 直播地址.
+     * 参考: https://www.vhall.com/saas/doc/158.html
+     */
+    fun generateWatchUrl(id: String, userId: String = "", nickName: String = "默认", k: String = ""): String {
         val email = URLEncoder.encode("$userId@vhall.com", StandardCharsets.UTF_8.name())
-        return "https://live.vhall.com/webinar/inituser/${id}?email=${email}&name=${URLEncoder.encode(nickName, StandardCharsets.UTF_8.name())}"
+        return "https://live.vhall.com/webinar/inituser/${id}?email=${email}&name=${
+            URLEncoder.encode(
+                nickName,
+                StandardCharsets.UTF_8.name()
+            )
+        }&k=${k}"
     }
 }

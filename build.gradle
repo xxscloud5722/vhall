@@ -10,7 +10,7 @@ plugins {
 
 apply from: '/Users/xxscloud/config/publish.gradle'
 group 'com.xxscloud.sdk'
-version '1.2'
+version '1.3'
 
 repositories {
     maven { url 'https://maven.aliyun.com/repository/central' }
